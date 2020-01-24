@@ -32,6 +32,27 @@
             ## the gql sequel
           </script>
         </section>
+        <section>
+          <h4>Query Refresher</h4>
+          <pre><code class="hljs lang-gql" data-trim data-line-numbers="">
+            query getWidgets($id: Int!) {
+              primaryLocation {
+                widgets {
+                  byIdOrFirst(id: $id) {
+                    id
+                    name
+                    durationSeconds
+                    sidebarText
+                    showWeather
+                    __typename
+                  }
+                  __typename
+                }
+                __typename
+              }
+            }
+          </code></pre>
+        </section>
       </div>
     </div>
 
