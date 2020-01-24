@@ -326,7 +326,9 @@
             Note:
             contrived
 
-            didn't need to update the weather live. could have polled.
+            didn't need to update the weather live
+
+            could have used polling
           </script>
         </section>
         <section data-markdown>
@@ -373,43 +375,215 @@
             ```
 
             Note:
-            Only need to do this since our subscription query doesn't match our event collection schema.
+            Need this because subscription result doesn't match the event collection schema.
 
             This is a performance optimization so we don't need to query counts on the backend
 
             You can avoid these manual updates for sub/mut
           </script>
         </section>
-
-        <section data-markdown>
-          <script type="text/template">
-            fragment anti-pattern
-
-            * adding to a fragment to share with other components
-            * fragments should remain single purpose
-          </script>
-        </section>
         <section data-markdown>
           <script type="text/template">
             # Patterns
 
-            * nesting fragments
+            * composing fragments
             * schema design
             * orchestration
           </script>
         </section>
         <section data-markdown>
           <script type="text/template">
-            # nesting fragments
+            composing fragments
 
-            introspection fragment matcher
-
+            * each component gets a fragment and exports it
             * tooling to stitch together fragments
             * tooling to extract data from response based on fragment
-            * component defines it fragment for a type
-            * component exports the fragment for consumption with it
 
-            Side note: this answers a question Daniel posed when I first started. How do you track down what fields are used in an API and where 
+            Note:
+            answers "How do you track down what fields are used in an API and where"
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            composing fragments
+
+            current-temp.jsx
+            ```javascript
+              const getCurrentTemp = gql`
+                fragment CurrentTemp on Weather {
+                  currently {
+                    temperature
+                  }
+                }
+              `;
+              const CurrentTemp = ({ weather }) =>
+                `${parseInt(weather.currently.temperature, 10)}°`;
+              CurrentTemp.fragments = {
+                weather: getCurrentTemp,
+              };
+
+              export default withFragment(CurrentTemp);
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            composing fragments
+
+            hourly-temps.jsx
+            ```javascript
+              const getHourlyWeather = gql`
+                fragment HourlyWeather on Weather {
+                  hourly {
+                    data {
+                      temperature
+                      time
+                      precipProbability
+                    }
+                  }
+                }
+              `;
+
+              const HourlyTemps = ({ weather, hours }) => {
+                // ...
+              }
+              
+              HourlyTemps.fragments = {
+                weather: getHourlyWeather,
+              };
+
+              export default withFragment(HourlyTemps);
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            composing fragments
+
+            weather-panel.jsx
+            ```javascript
+              const PanelWeather = gql`
+                fragment PanelWeather on Weather {
+                  ...CurrentTemp
+                  ...HourlyWeather
+                  ...MinutelyWeather
+                  ...DailyWeather
+                  ...SunriseSunsetWeather
+                }
+
+                ${CurrentTemp.fragments.weather}
+                ${HourlyTemps.fragments.weather}
+                ${MinutelyWeather.fragments.weather}
+                ${DailyWeather.fragments.weather}
+                ${SunriseSunset.fragments.weather}
+              `;
+
+              const Panel = ({ weather }) => {
+                // <Query /> here
+                // or continue nesting to query root
+              }
+
+              export default Panel;
+              // or
+              export default withFragment(Panel);
+            ```
+
+            Note:
+            Lesson learned is to not use statics on the component. Causes new issues.
+
+            Going to switch to exports and args on withFragment
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            schema design
+            
+            mistake to design like REST resources
+            ![alt text](img/resources.png)
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            schema design
+            ![alt text](img/graph.png)
+
+            Note:
+            design graph for a page
+
+            query location from url
+            query enabled widgets
+            query current widget based on state
+            query widget specific data
+
+            simplifies client app state
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            schema design
+
+            CK cards page waterfall
+
+            * user -> credit score
+            * credit score -> filters
+            * filters -> sort options
+            * sort options -> credit cards
+
+            Note:
+            Dependent requests that block page load
+            A lot like REST waterfall requests
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            schema design
+
+            CK cards page graph
+            ```
+              query getCreditCards(...) {
+                user {
+                  creditScore
+                  filterOptions(...) {
+                    sortOptions(...) {
+                      ...
+                    }
+                  }
+                  creditCards(...) {
+                    ...
+                  }
+                }
+              }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            orchestration
+
+            * graph schema + nested fragments
+            * controllers that:
+              * aggregates query fragments
+              * controls subscriptions 
+              * dispense data as props
+
+            Note:
+            Next logic step for helios
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            fragment anti-pattern
+
+            * adding to a fragment to share with other components
+            * fragments should remain single purpose
+            Note:
+
+            CK had a single credit card fragment that was used every where
+
+            Unneccessary data
+            Hard to maintain
+
+            Use fragments strength.
           </script>
         </section>
         <section data-markdown>
@@ -418,7 +592,6 @@
 
             * persisted queries
             * server side rendering
-            * request waterfall
           </script>
         </section>
         <section data-markdown>
@@ -427,7 +600,6 @@
 
             * queries tend grow large
             * costs package size and network request
-            * graphql payload:
           </script>
         </section>
         <section data-markdown>
@@ -442,6 +614,13 @@
         </section>
         <section data-markdown>
           <script type="text/template">
+            persisted queries
+
+            ![alt text](img/persisted-query.png)
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
             server side rendering
 
             * use ssr mode for your client. allows controling which queries run
@@ -451,20 +630,26 @@
         </section>
         <section data-markdown>
           <script type="text/template">
-            request waterfall
+            server side rendering
 
-            * 
+            in html
+            ```javascript
+              window.__APOLLO_STATE__ = JSON.stringify(client.extract());
+            ```
+
+            in js
+            ```javascript
+              const client = new ApolloClient({
+                cache: new InMemoryCache().restore(window.__APOLLO_STATE__),
+                link,
+              });
+            ```
           </script>
         </section>
         <section data-markdown>
           <script type="text/template">
+            Questions?
           </script>
-        </section>
-        <section data-markdown>
-          <script type="text/template">
-          </script>
-        </section>
-        <section>
         </section>
       </div>
     </div>
