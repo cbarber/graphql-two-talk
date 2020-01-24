@@ -61,6 +61,131 @@
             }
           </code></pre>
         </section>
+        <section data-markdown>
+          <script type="text/template">
+            # Tooling
+
+            * Linting
+            * Codegen
+            * Browser dev tools
+            * Sandbox
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            eslint-plugin-graphql
+
+            .eslintrc.js
+            ```javascript
+              module.exports = {
+                // ...
+                rules: {
+                  // ...
+                  'graphql/template-strings': [
+                    'error',
+                    {
+                      env: 'apollo',
+                      schemaJson: require('./app/javascript/schema.json'),
+                    },
+                  ],
+                },
+              };
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            eslint-plugin-graphql
+            ![alt text](img/yarn-lint.png)
+            ![alt text](img/vim-lint.png)
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            graphql-codegen
+
+            codegen.yml
+            ```yaml
+            schema: http://localhost:5000/graphql
+            generates:
+              src/types.ts:
+                - typescript
+              src/types.java:
+                - java
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            graphql-codegen
+
+            src/types.ts
+            ```typescript
+
+              export type Maybe<T> = T | null;
+              /** All built-in and custom scalars, mapped to their actual values */
+              export type Scalars = {
+                ID: string,
+                String: string,
+                Boolean: boolean,
+                Int: number,
+                Float: number,
+                DateTime: any,
+                UTCDateTime: any,
+                UnixDateTime: any,
+              };
+
+              export type Announcement = {
+                 __typename?: 'Announcement',
+                announcementId: Scalars['String'],
+                company: Scalars['String'],
+                id: Scalars['ID'],
+                locationId: Scalars['String'],
+                message: Scalars['String'],
+                people: Scalars['String'],
+                publishOn: Scalars['UTCDateTime'],
+              };
+
+
+              export type Event = {
+                 __typename?: 'Event',
+                createdAt: Scalars['DateTime'],
+                externalId: Scalars['String'],
+                id: Scalars['ID'],
+                source: EventSource,
+              };
+
+              export type EventCollection = {
+                 __typename?: 'EventCollection',
+                all: Array<Event>,
+                count: EventCount,
+              };
+
+              export type EventCount = {
+                 __typename?: 'EventCount',
+                githubCommit: Scalars['Int'],
+                githubPull: Scalars['Int'],
+                slackMessage: Scalars['Int'],
+              };
+
+              export enum EventSource {
+                GithubPull = 'githubPull',
+                GithubCommit = 'githubCommit',
+                SlackMessage = 'slackMessage'
+              }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            apollo dev tools
+            ![alt text](img/apollo-dev-tools.png)
+          </script>
+        </section>
+        <section data-background-iframe="http://localhost:5000/graphiql" data-background-interactive>
+        </section>
+        <section>
+        </section>
       </div>
     </div>
 
