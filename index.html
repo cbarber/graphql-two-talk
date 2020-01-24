@@ -41,7 +41,7 @@
           </script>
         </section>
         <section>
-          <h4>Query Refresher</h4>
+          <p>Query Refresher</p>
           <pre><code class="hljs lang-gql" data-trim data-line-numbers="">
             query getWidgets($id: Int!) {
               primaryLocation {
@@ -82,6 +82,13 @@
                 rules: {
                   // ...
                   'graphql/template-strings': [
+                    'error',
+                    {
+                      env: 'apollo',
+                      schemaJson: require('./app/javascript/schema.json'),
+                    },
+                  ],
+                  'graphql/no-deprecated-fields': [
                     'error',
                     {
                       env: 'apollo',
@@ -183,6 +190,279 @@
           </script>
         </section>
         <section data-background-iframe="http://localhost:5000/graphiql" data-background-interactive>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            # Advanced
+
+            * fragments
+            * deprecation
+            * batching
+            * caching
+            * subscriptions
+          </script>
+        </section>
+        <section>
+          <p>fragments</p>
+          <pre><code class="hljs lang-gql" data-trim data-line-numbers="">
+            query getDailyWeather {
+              location(name: 'PVD') {
+                weather {
+                  ...DailyWeather
+                }
+              }
+              location(name: 'BLD') {
+                weather {
+                  ...DailyWeather
+                }
+              }
+            }
+
+            fragment DailyWeather on Weather {
+              daily {
+                data {
+                  temperatureLow
+                  temperatureHigh
+                  time
+                  precipProbability
+                  icon
+                }
+              }
+            }
+          </code></pre>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            @deprecated
+
+            schema.idl
+
+            ```graphql
+              type Query {
+                ...
+
+                """
+                Tweets from MojoTech
+                """
+                tweets: [MojoTweet!]! @deprecated(reason: "Use location widgets instead")
+              }
+
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            @deprecated
+
+            ![alt text](img/graphiql-deprecated.png)
+
+            Note:
+            this also works for eslint plugin
+          </script>
+        </section>
+        <section>
+          <p>batching</p>
+          <div class="container">
+            <div class="col">
+              without
+              <img src="img/no-batching.png" />
+            </div>
+            <div class="col">
+              with
+              <img src="img/batching.png" />
+            </div>
+          </div>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            caching
+
+            ![alt text](img/cache.png)
+
+            Note:
+            __typename => Type
+
+            variables included
+
+            fragment matching
+            
+            mutations also update cache with returned response
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            caching
+
+            apollo fetchPolicy
+            * cache-first (default)
+            * cache-and-network
+            * network-only
+            * cache-only
+            * no-cache
+
+            Note:
+            Switching weather from cache-first to network-only. Stale data.
+
+            Switching back again to network-only + cache-first when prefetching
+
+            Other clients have other policies
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            subscriptions
+
+            weather subscription
+            ```graphql
+              subscription onWeatherPublished($latitude: Float!, $longitude: Float!) {
+                weatherPublished(latitude: $latitude, longitude: $longitude) {
+                  ...WeatherWidget
+                }
+              }
+
+              fragment WeatherWidget { }
+            ```
+            
+            Note:
+            contrived
+
+            didn't need to update the weather live. could have polled.
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            subscriptions
+
+            by the numbers subscription
+            ```graphql
+              subscription onEventPublished {
+                eventPublished {
+                  source
+                }
+              }
+            ```
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            subscriptions
+
+            by the numbers update apollo cache
+            ```javascript
+              ({ loading, error, data, subscribeToMore }) => {
+                // ...
+                subscribeToMore({
+                  document: subscribeEventPublished,
+                  updateQuery: (prev, { subscriptionData }) => {
+                    // prev is existing cache store
+
+                    if (!subscriptionData.data) {
+                      return prev;
+                    }
+
+                    const { source } = subscriptionData.data.eventPublished;
+
+                    return over(
+                      lensPath(['events', 'count', source]),
+                      inc,
+                      prev,
+                    );
+                  },
+                })
+              }
+            ```
+
+            Note:
+            Only need to do this since our subscription query doesn't match our event collection schema.
+
+            This is a performance optimization so we don't need to query counts on the backend
+
+            You can avoid these manual updates for sub/mut
+          </script>
+        </section>
+
+        <section data-markdown>
+          <script type="text/template">
+            fragment anti-pattern
+
+            * adding to a fragment to share with other components
+            * fragments should remain single purpose
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            # Patterns
+
+            * nesting fragments
+            * schema design
+            * orchestration
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            # nesting fragments
+
+            introspection fragment matcher
+
+            * tooling to stitch together fragments
+            * tooling to extract data from response based on fragment
+            * component defines it fragment for a type
+            * component exports the fragment for consumption with it
+
+            Side note: this answers a question Daniel posed when I first started. How do you track down what fields are used in an API and where 
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            # Optimizations
+
+            * persisted queries
+            * server side rendering
+            * request waterfall
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            persisted queries
+
+            * queries tend grow large
+            * costs package size and network request
+            * graphql payload:
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            persisted queries
+
+            * hash the full query
+            * submit hash and operationName to server during build or request
+            * use hash and operationName for queries
+            * bonus: replace query AST in package with hash object
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            server side rendering
+
+            * use ssr mode for your client. allows controling which queries run
+            * populate data in response
+            * build client store from data
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+            request waterfall
+
+            * 
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+          </script>
+        </section>
+        <section data-markdown>
+          <script type="text/template">
+          </script>
         </section>
         <section>
         </section>
